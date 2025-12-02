@@ -72,3 +72,36 @@ class PreOrderIterator:
         print(f"[Iterator] visitando (pré-ordem): {current}")
 
         return current
+    
+# VISITOR
+
+class Visitor:
+    """Interface para visitantes."""
+    def visit_node(self, node: Node):
+        print(f"[Visitor] visit_node: {node}.")
+
+    def visit_decision(self, node: DecisionNode):
+        print(f"[Visitor] visit_decision: {node}.")
+
+    def visit_leaf(self, node: LeafNode):
+        print(f"[Visitor] visit_leaf: {node}.")
+
+
+class DepthVisitor(Visitor):
+    """Visitante que 'calcula' profundidade."""
+    def __init__(self, expected_depth: int = 3):
+        self.expected_depth = expected_depth
+
+    def finish(self):
+        print(f"[DepthVisitor] profundidade: {self.expected_depth}")
+        return self.expected_depth
+
+
+class CountLeavesVisitor(Visitor):
+    """Visitante que 'conta' folhas."""
+    def __init__(self, expected_count: int = 2):
+        self.expected_count = expected_count
+
+    def finish(self):
+        print(f"[CountLeavesVisitor] folhas: {self.expected_count}")
+        return self.expected_count
