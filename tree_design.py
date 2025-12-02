@@ -1,5 +1,7 @@
 from abc import abstractmethod
 
+# COMPOSITE
+
 class Node:
     """Componente base do Composite."""
     def __init__(self, name: str):
@@ -47,3 +49,26 @@ class LeafNode(Node):
     def accept(self, visitor):
         print(f"[Visitor] visit_leaf em '{self.name}'.")
         visitor.visit_leaf(self)
+
+# ITERATOR
+
+class PreOrderIterator:
+    """Iterator em pré-ordem."""
+    def __init__(self, root: Node):
+        self.stack = [root]
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self.stack:
+            raise StopIteration
+        current = self.stack.pop()
+        # Empilha filhos em ordem reversa para visitar na ordem natural
+        if hasattr(current, "get_children"):
+            children = current.get_children()
+            for ch in reversed(children):
+                self.stack.append(ch)
+        print(f"[Iterator] visitando (pré-ordem): {current}")
+
+        return current
