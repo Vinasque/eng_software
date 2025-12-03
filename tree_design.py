@@ -136,7 +136,14 @@ class StoppingState(BuilderState):
 
 class PruningState(BuilderState):
     def handle(self, builder: "TreeBuilder"):
-        print("[State] PruningState: realizando poda.")
+        print("[State] PruningState: realizando poda (mock).")
+        # Se o root for DecisionNode, remove o último filho
+        if isinstance(builder.root, DecisionNode):
+            children = builder.root.get_children()
+            if children:
+                to_remove = children[-1]
+                builder.root.remove(to_remove)
+                print(f"[State] Poda: removido '{to_remove}' do root (mock).")
         builder.set_state(None)  # fim do fluxo
 
 class TreeBuilder:
