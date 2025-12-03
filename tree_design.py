@@ -1,4 +1,10 @@
+from __future__ import annotations
 from abc import ABC, abstractmethod
+from typing import Iterator, List, Tuple, Optional
+
+# Print mais bonito
+def log(tag: str, msg: str) -> None:
+    print(f"[{tag}] {msg}")
 
 # COMPOSITE
 
@@ -8,164 +14,214 @@ class Node(ABC):
         self.name = name
 
     @abstractmethod
-    def add(self, child: "Node"): ...
-    @abstractmethod
-    def remove(self, child: "Node"): ...
-    @abstractmethod
-    def get_children(self): ...
+    def add(self, child: "Node") -> None: ...
 
-    def accept(self, visitor):
-        # as subclasses vão subescrever
-        print(f"[Visitor] visit_node em '{self.name}'.")
+    @abstractmethod
+    def remove(self, child: "Node") -> None: ...
 
-    def __repr__(self):
+    @abstractmethod
+    def get_children(self) -> list["Node"]: ...
+
+    @abstractmethod
+    def accept(self, visitor: "Visitor") -> None: ...
+
+    # Novamente, só para deixar o print mais bonito
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}('{self.name}')"
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}<{self.name}>"
+
 
 class DecisionNode(Node):
     """Nó interno que pode ter filhos."""
     def __init__(self, name: str):
         super().__init__(name)
-        self.children = []
+        self._children: List[Node] = []
 
-    def add(self, child: Node):
-        self.children.append(child)
-        print(f"[Composite] Adicionado filho {child} em DecisionNode('{self.name}').")
+    def add(self, child: Node) -> None:
+        if not isinstance(child, Node):
+            raise TypeError("child deve ser um Node.")
+        self._children.append(child)
+        log("Composite", f"Adicionado filho {child} em DecisionNode('{self.name}').")
 
-    def remove(self, child: Node):
-        if child in self.children:
-            self.children.remove(child)
-            print(f"[Composite] Removido filho {child} de DecisionNode('{self.name}').")
+    def remove(self, child: Node) -> None:
+        if child in self._children:
+            self._children.remove(child)
+            log("Composite", f"Removido filho {child} de DecisionNode('{self.name}').")
         else:
-            print(f"[Composite] Filho {child} não encontrado em '{self.name}'.")
+            log("Composite", f"Filho {child} não encontrado em '{self.name}'.")
 
-    def get_children(self):
-        return list(self.children)
+    def get_children(self) -> list[Node]:
+        return list(self._children)  # cópia defensiva
 
-    def accept(self, visitor):
-        print(f"[Visitor] visit_decision em '{self.name}'.")
-        visitor.visit_decision(self)
+    def accept(self, visitor: "Visitor") -> None:
+        log("Visitor", f"visit_decision em '{self.name}'.")
+        visitor.visit_node(self)      # gancho genérico
+        visitor.visit_decision(self)  # específico
+
 
 class LeafNode(Node):
-    """Folha"""
-    def add(self, child: Node):
+    """Folha."""
+    def add(self, child: Node) -> None:
         raise NotImplementedError("LeafNode não pode receber filhos.")
 
-    def remove(self, child: Node):
+    def remove(self, child: Node) -> None:
         raise NotImplementedError("LeafNode não tem filhos para remover.")
 
-    def get_children(self):
+    def get_children(self) -> list[Node]:
         return []
 
-    def accept(self, visitor):
-        print(f"[Visitor] visit_leaf em '{self.name}'.")
+    def accept(self, visitor: "Visitor") -> None:
+        log("Visitor", f"visit_leaf em '{self.name}'.")
+        visitor.visit_node(self)
         visitor.visit_leaf(self)
 
-# ITERATOR
+# ITERATORS
 
 class PreOrderIterator:
-    """Iterator em pré-ordem."""
+    """Iterator em pré-ordem que também fornece a profundidade."""
     def __init__(self, root: Node):
-        self.stack = [root]
+        # pilha de tuplas (node, depth)
+        self._stack: List[Tuple[Node, int]] = [(root, 0)]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Tuple[Node, int]]:
         return self
 
-    def __next__(self):
-        if not self.stack:
+    def __next__(self) -> Tuple[Node, int]:
+        if not self._stack:
             raise StopIteration
-        current = self.stack.pop()
-        # Empilha filhos em ordem reversa para visitar na ordem natural
+        current, d = self._stack.pop()
         if hasattr(current, "get_children"):
-            children = current.get_children()
-            for ch in reversed(children):
-                self.stack.append(ch)
-        print(f"[Iterator] visitando (pré-ordem): {current}")
+            for ch in reversed(current.get_children()):
+                self._stack.append((ch, d + 1))
+        log("Iterator", f"visitando (pré-ordem): {current} (depth={d})")
+        return current, d
 
-        return current
-    
+
+class BFSIterator:
+    """Iterator em largura (BFS)."""
+    def __init__(self, root: Node):
+        self._queue: List[Tuple[Node, int]] = [(root, 0)]
+
+    def __iter__(self) -> Iterator[Tuple[Node, int]]:
+        return self
+
+    def __next__(self) -> Tuple[Node, int]:
+        if not self._queue:
+            raise StopIteration
+        current, d = self._queue.pop(0)
+        if hasattr(current, "get_children"):
+            for ch in current.get_children():
+                self._queue.append((ch, d + 1))
+        log("Iterator", f"visitando (largura): {current} (depth={d})")
+        return current, d
+
 # VISITOR
 
-class Visitor:
-    """Interface para visitantes."""
-    def visit_node(self, node: Node):
-        print(f"[Visitor] visit_node: {node}.")
+class Visitor(ABC):
+    """Interface para visitors."""
 
-    def visit_decision(self, node: DecisionNode):
-        print(f"[Visitor] visit_decision: {node}.")
+    def visit_node(self, node: Node) -> None:
+        log("Visitor", f"visit_node: {node}.")
 
-    def visit_leaf(self, node: LeafNode):
-        print(f"[Visitor] visit_leaf: {node}.")
+    def visit_decision(self, node: DecisionNode) -> None:
+        log("Visitor", f"visit_decision: {node}.")
+
+    def visit_leaf(self, node: LeafNode) -> None:
+        log("Visitor", f"visit_leaf: {node}.")
 
 
 class DepthVisitor(Visitor):
     """Visitante que 'calcula' profundidade."""
-    def __init__(self, expected_depth: int = 3):
-        self.expected_depth = expected_depth
+    def __init__(self) -> None:
+        self.max_depth_vista: int = -1  # começa em -1 para root = 0
 
-    def finish(self):
-        print(f"[DepthVisitor] profundidade: {self.expected_depth}")
-        return self.expected_depth
+    # Gancho auxiliar usado pelo demo quando o iterator fornece profundidade
+    def note_depth(self, depth: int) -> None:
+        self.max_depth_vista = max(self.max_depth_vista, depth)
+        log("DepthVisitor", f" registrando depth = {depth}: max = {self.max_depth_vista}")
+
+    def finish(self) -> int:
+        log("DepthVisitor", f"profundidade: {self.max_depth_vista}")
+        return self.max_depth_vista
 
 
 class CountLeavesVisitor(Visitor):
     """Visitante que 'conta' folhas."""
-    def __init__(self, expected_count: int = 2):
-        self.expected_count = expected_count
+    def __init__(self) -> None:
+        self.count: int = 0
 
-    def finish(self):
-        print(f"[CountLeavesVisitor] folhas: {self.expected_count}")
-        return self.expected_count
-    
+    def visit_leaf(self, node: LeafNode) -> None:
+        super().visit_leaf(node)
+        self.count += 1
+        log("CountLeavesVisitor", f"contando folha: agora = {self.count}")
+
+    def finish(self) -> int:
+        log("CountLeavesVisitor", f"folhas: {self.count}")
+        return self.count
+
+
+# ==========
 # STATE
+# ==========
 
-class BuilderState:
+class BuilderState(ABC):
     """Interface para estados do construtor da árvore."""
     @abstractmethod
-    def handle(self, builder: "TreeBuilder"): pass
+    def handle(self, builder: "TreeBuilder") -> None:
+        ...
+
 
 class SplittingState(BuilderState):
-    def handle(self, builder: "TreeBuilder"):
-        print("[State] SplittingState: dividindo nós.")
-        print("         ...criando DecisionNodes/LeafNodes")
+    def handle(self, builder: "TreeBuilder") -> None:
+        log("State", "SplittingState: dividindo nós.")
+        log("State", "         ...criando DecisionNodes/LeafNodes.")
         builder.set_state(StoppingState())
 
 class StoppingState(BuilderState):
-    def handle(self, builder: "TreeBuilder"):
-        print("[State] StoppingState: condição de parada atingida.")
+    def handle(self, builder: "TreeBuilder") -> None:
+        log("State", "StoppingState: condição de parada atingida.")
         builder.set_state(PruningState())
 
 class PruningState(BuilderState):
-    def handle(self, builder: "TreeBuilder"):
-        print("[State] PruningState: realizando poda (mock).")
+    def handle(self, builder: "TreeBuilder") -> None:
+        log("State", "PruningState: realizando poda.")
         # Se o root for DecisionNode, remove o último filho
         if isinstance(builder.root, DecisionNode):
             children = builder.root.get_children()
             if children:
                 to_remove = children[-1]
                 builder.root.remove(to_remove)
-                print(f"[State] Poda: removido '{to_remove}' do root (mock).")
+                log("State", f"Poda: removido '{to_remove}' do root.")
         builder.set_state(None)  # fim do fluxo
 
 class TreeBuilder:
     """Simula a construção em etapas."""
-    def __init__(self, root: Node | None = None):
-        self.state: BuilderState | None = SplittingState()
-        self.root = root
+    def __init__(self, root: Optional[Node] = None):
+        self.state: Optional[BuilderState] = SplittingState()
+        self.root: Optional[Node] = root
 
-    def set_state(self, state: BuilderState | None):
+    def set_state(self, state: Optional[BuilderState]) -> None:
         self.state = state
-        print(f"[State] transição: {type(state).__name__ if state else 'Fim'}.")
+        log("State", f"transição: {type(state).__name__ if state else 'Fim'}.")
 
-    def next(self):
+    def next(self) -> None:
         if self.state is None:
-            print("[State] não há mais estados.")
+            log("State", "não há mais estados.")
             return
 
-        if self.root is not None:
-            print(f"[State] trabalhando sobre root '{self.root.name}'.")
+        if self.root is None:
+            log("State", "aviso: root = None (nada a fazer).")
+        else:
+            log("State", f"trabalhando sobre root '{self.root.name}'.")
         self.state.handle(self)
 
-def print_tree(root: Node, indent: str = ""):
+    def run(self) -> None:
+        while self.state is not None:
+            self.next()
+
+def print_tree(root: Node, indent: str = "") -> None:
     """Imprime a estrutura hierárquica."""
     print(f"{indent}- {root}")
     for ch in root.get_children():
