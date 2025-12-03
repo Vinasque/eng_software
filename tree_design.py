@@ -105,3 +105,41 @@ class CountLeavesVisitor(Visitor):
     def finish(self):
         print(f"[CountLeavesVisitor] folhas: {self.expected_count}")
         return self.expected_count
+    
+# STATE
+
+class BuilderState:
+    """Interface para estados do construtor da árvore."""
+    @abstractmethod
+    def handle(self, builder: "TreeBuilder"): pass
+
+class SplittingState(BuilderState):
+    def handle(self, builder: "TreeBuilder"):
+        print("[State] SplittingState: dividindo nós.")
+        print("         ...criando DecisionNodes/LeafNodes")
+        builder.set_state(StoppingState())
+
+class StoppingState(BuilderState):
+    def handle(self, builder: "TreeBuilder"):
+        print("[State] StoppingState: condição de parada atingida.")
+        builder.set_state(PruningState())
+
+class PruningState(BuilderState):
+    def handle(self, builder: "TreeBuilder"):
+        print("[State] PruningState: realizando poda.")
+        builder.set_state(None)  # fim do fluxo
+
+class TreeBuilder:
+    """Simula a construção em etapas."""
+    def __init__(self):
+        self.state: BuilderState | None = SplittingState()
+
+    def set_state(self, state: BuilderState | None):
+        self.state = state
+        print(f"[State] transição: {type(state).__name__ if state else 'Fim'}.")
+
+    def next(self):
+        if self.state is None:
+            print("[State] não há mais estados.")
+            return
+        self.state.handle(self)
