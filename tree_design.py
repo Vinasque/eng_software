@@ -131,8 +131,9 @@ class PruningState(BuilderState):
 
 class TreeBuilder:
     """Simula a construção em etapas."""
-    def __init__(self):
+    def __init__(self, root: Node | None = None):
         self.state: BuilderState | None = SplittingState()
+        self.root = root
 
     def set_state(self, state: BuilderState | None):
         self.state = state
@@ -142,4 +143,14 @@ class TreeBuilder:
         if self.state is None:
             print("[State] não há mais estados.")
             return
+
+        if self.root is not None:
+            print(f"[State] trabalhando sobre root '{self.root.name}'.")
         self.state.handle(self)
+
+def print_tree(root: Node, indent: str = ""):
+    """Imprime a estrutura hierárquica."""
+    print(f"{indent}- {root}")
+    if hasattr(root, "get_children"):
+        for ch in root.get_children():
+            print_tree(ch, indent + "  ")

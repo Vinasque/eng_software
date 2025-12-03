@@ -1,4 +1,4 @@
-from tree_design import DecisionNode, LeafNode, PreOrderIterator, DepthVisitor, CountLeavesVisitor, TreeBuilder
+from tree_design import DecisionNode, LeafNode, PreOrderIterator, DepthVisitor, CountLeavesVisitor, TreeBuilder, print_tree
 
 if __name__ == "__main__":
     # Composite
@@ -6,7 +6,12 @@ if __name__ == "__main__":
     a = DecisionNode("A")
     b = LeafNode("B")
     c = LeafNode("C")
-    root.add(a); root.add(b); a.add(c)
+    root.add(a)
+    root.add(b)
+    a.add(c)
+
+    print("\nEstrutura atual:")
+    print_tree(root)
 
     # Iterator
     print("\nPercorrendo com PreOrderIterator:")
