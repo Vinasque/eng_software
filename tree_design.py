@@ -1,24 +1,25 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 # COMPOSITE
 
-class Node:
+class Node(ABC):
     """Componente base do Composite."""
     def __init__(self, name: str):
         self.name = name
 
     @abstractmethod
-    def add(self, child: "Node"): pass
-
+    def add(self, child: "Node"): ...
     @abstractmethod
-    def remove(self, child: "Node"): pass
-
+    def remove(self, child: "Node"): ...
     @abstractmethod
-    def get_children(self): pass
+    def get_children(self): ...
 
     def accept(self, visitor):
         # as subclasses vão subescrever
         print(f"[Visitor] visit_node em '{self.name}'.")
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}('{self.name}')"
 
 class DecisionNode(Node):
     """Nó interno que pode ter filhos."""
@@ -46,6 +47,15 @@ class DecisionNode(Node):
 
 class LeafNode(Node):
     """Folha"""
+    def add(self, child: Node):
+        raise NotImplementedError("LeafNode não pode receber filhos.")
+
+    def remove(self, child: Node):
+        raise NotImplementedError("LeafNode não tem filhos para remover.")
+
+    def get_children(self):
+        return []
+
     def accept(self, visitor):
         print(f"[Visitor] visit_leaf em '{self.name}'.")
         visitor.visit_leaf(self)
@@ -151,6 +161,5 @@ class TreeBuilder:
 def print_tree(root: Node, indent: str = ""):
     """Imprime a estrutura hierárquica."""
     print(f"{indent}- {root}")
-    if hasattr(root, "get_children"):
-        for ch in root.get_children():
-            print_tree(ch, indent + "  ")
+    for ch in root.get_children():
+        print_tree(ch, indent + "  ")
